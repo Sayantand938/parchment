@@ -1,0 +1,24 @@
+# Netlify Build Configuration for a Vite Project
+
+[build]
+  # This is the command Netlify will run to build your site.
+  # It should match the "build" script in your package.json.
+  command = "npm run build"
+
+  # This is the directory that contains the built site.
+  # Vite places its output in the "dist" folder by default.
+  publish = "dist"
+
+[dev]
+  # This section is for local development with the Netlify CLI,
+  # but it's good practice to include.
+  command = "npm run dev"
+  targetPort = 5173
+
+# This is the most critical part for Single Page Applications like yours.
+# It ensures that all routes (like /book/verity) are directed to your
+# index.html, allowing React Router to handle them.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
