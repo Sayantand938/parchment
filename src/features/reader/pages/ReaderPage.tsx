@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import type { LibraryBook, Chapter } from '@/shared/types';
+// Import BookIndex to use the full type from the JSON file
+import type { LibraryBook, Chapter, BookIndex } from '@/shared/types';
 import { Button } from '@/shared/components/ui/button';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/shared/components/ui/breadcrumb';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -25,8 +26,8 @@ export default function ReaderPage() {
   const location = useLocation();
 
   const [content, setContent] = useState('');
-  // State for data received from the router
   const [bookMetadata, setBookMetadata] = useState<LibraryBook | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]); // Store the original chapter tree
   const [currentChapter, setCurrentChapter] = useState<Chapter | null>(null);
   const [prevChapter, setPrevChapter] = useState<Chapter | null>(null);
   const [nextChapter, setNextChapter] = useState<Chapter | null>(null);
@@ -37,27 +38,44 @@ export default function ReaderPage() {
   useEffect(() => {
     if (!bookId || !chapterId) return;
 
-    // Get all necessary data from the router state passed by BookPage
-    const metadataFromState = location.state?.bookMetadata as LibraryBook;
-    const chaptersFromState = location.state?.chapters as Chapter[];
-
-    if (!metadataFromState || !chaptersFromState) {
-      setError("Chapter data not found. Please return to the book's table of contents.");
-      setLoading(false);
-      return;
-    }
-
-    setBookMetadata(metadataFromState);
-
-    const fetchChapterContent = async () => {
+    const fetchPageData = async () => {
       try {
         setLoading(true);
+        setError(null);
+
+        // Attempt to get data from state first for performance
+        let metadataFromState = location.state?.bookMetadata as LibraryBook | undefined;
+        let chaptersFromState = location.state?.chapters as Chapter[] | undefined;
+
+        // --- NEW: FALLBACK DATA FETCHING LOGIC ---
+        if (!metadataFromState || !chaptersFromState) {
+          // If state is missing, fetch the book's index.json directly
+          const response = await fetch(`/books/${bookId}/index.json`);
+          if (!response.ok) {
+            throw new Error(`Failed to load book data for "${bookId}".`);
+          }
+          const bookIndex: BookIndex = await response.json();
+          
+          // Reconstruct the necessary data from the fetched index
+          metadataFromState = {
+            id: bookId,
+            title: bookIndex.title,
+            author: bookIndex.author,
+            description: bookIndex.description,
+            cover: bookIndex.cover,
+          };
+          chaptersFromState = bookIndex.chapters;
+        }
+        // --- END OF FALLBACK LOGIC ---
+
+        setBookMetadata(metadataFromState);
+        setChapters(chaptersFromState); // Store chapters for navigation
 
         const allChapters = flattenChapters(chaptersFromState);
         const currentIndex = allChapters.findIndex(c => c.id === chapterId);
 
         if (currentIndex === -1) {
-          throw new Error('Chapter not found in the provided list.');
+          throw new Error('Chapter not found in the book\'s chapter list.');
         }
 
         const chapter = allChapters[currentIndex];
@@ -65,39 +83,40 @@ export default function ReaderPage() {
         setPrevChapter(currentIndex > 0 ? allChapters[currentIndex - 1] : null);
         setNextChapter(currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null);
         
-        // This is now the ONLY fetch call in this component
         const contentResponse = await fetch(`/books/${bookId}/${chapter.file}`);
-        if (!contentResponse.ok) throw new Error(`Failed to load chapter content for ${chapter.file}.`);
+        if (!contentResponse.ok) {
+          throw new Error(`Failed to load chapter content for ${chapter.file}.`);
+        }
         
-        // Simulate a slight delay to prevent jarring content flash
         await new Promise(resolve => setTimeout(resolve, 150));
         const markdown = await contentResponse.text();
         setContent(markdown);
-      } catch (e) {
-        setError(`Failed to load chapter. Please ensure all files are correctly placed in /public/books/${bookId}/.`);
+      } catch (e: any) {
+        setError(e.message || `Failed to load chapter. Please ensure all files are correctly placed in /public/books/${bookId}/.`);
         console.error(e);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchChapterContent();
+    fetchPageData();
   }, [bookId, chapterId, location.state]);
 
-  const handlePrevClick = () => {
-    if (prevChapter) {
-        navigate(`/book/${bookId}/${prevChapter.id}`, { state: location.state });
-    }
-  };
-
-  const handleNextClick = () => {
-    if (nextChapter) {
-        navigate(`/book/${bookId}/${nextChapter.id}`, { state: location.state });
+  const handleNavigation = (targetChapter: Chapter | null) => {
+    if (targetChapter) {
+        // Pass the full state object during navigation to maintain the fast path
+        navigate(`/book/${bookId}/${targetChapter.id}`, { 
+            state: {
+                bookMetadata,
+                chapters
+            }
+        });
     }
   };
 
 
   if (loading) {
+    // Skeleton loader remains the same
     return (
         <div className="space-y-6 animate-pulse">
             <Skeleton className="h-5 w-3/4" />
@@ -136,7 +155,6 @@ export default function ReaderPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-             {/* Pass state back to BookPage if user clicks breadcrumb */}
             <BreadcrumbLink asChild><Link to={`/book/${bookId}`} state={{ book: bookMetadata }}>{bookMetadata.title}</Link></BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -154,13 +172,13 @@ export default function ReaderPage() {
 
       <div className="flex justify-between mt-8 pt-4 border-t">
         {prevChapter ? (
-          <Button variant="outline" onClick={handlePrevClick}>
+          <Button variant="outline" onClick={() => handleNavigation(prevChapter)}>
             <ChevronLeft className="mr-2 h-4 w-4" />
             {prevChapter.title}
           </Button>
         ) : <div />}
         {nextChapter ? (
-          <Button variant="outline" onClick={handleNextClick}>
+          <Button variant="outline" onClick={() => handleNavigation(nextChapter)}>
             {nextChapter.title}
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
