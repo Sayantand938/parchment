@@ -1,0 +1,32 @@
+{
+  "title": "The Mist",
+  "author": "Stephen King",
+  "description": "A gripping novella about a mysterious mist that envelops a small town, trapping a group of residents in a supermarket with terrifying creatures lurking outside.",
+  "cover": "/books/the-mist/cover.png",
+  "chapters": [
+    {
+      "sl": 1,
+      "id": "chapter-1",
+      "title": "The Coming of the Storm.",
+      "file": "1.md"
+    },
+    {
+      "sl": 2,
+      "id": "chapter-2",
+      "title": "After the Storm.",
+      "file": "2.md"
+    },
+    {
+      "sl": 3,
+      "id": "chapter-3",
+      "title": "The Coming of the Mist.",
+      "file": "3.md"
+    },
+    {
+      "sl": 4,
+      "id": "chapter-4",
+      "title": "The Storage Area.",
+      "file": "4.md"
+    }
+  ]
+}

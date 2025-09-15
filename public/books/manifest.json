@@ -1,0 +1,23 @@
+[
+  {
+    "id": "the-mist",
+    "title": "The Mist",
+    "author": "Stephen King",
+    "description": "A gripping novella about a mysterious mist that envelops a small town, trapping a group of residents in a supermarket with terrifying creatures lurking outside.",
+    "cover": "/books/the-mist/cover.png"
+  },
+  {
+    "id": "the-murder-of-roger-ackroyd",
+    "title": "The Murder of Roger Ackroyd",
+    "author": "Agatha Christie",
+    "description": "A revolutionary crime novel by Agatha Christie, featuring Hercule Poirot, who has retired to a quiet village to grow vegetable marrows, only to be drawn into a murder investigation that challenges the very nature of the detective story.",
+    "cover": "/books/the-murder-of-roger-ackroyd/cover.jpg"
+  },
+  {
+    "id": "verity",
+    "title": "Verity",
+    "author": "Colleen Hoover",
+    "description": "A struggling writer accepts a job offer to complete the remaining books of a successful series, but she uncovers the chilling autobiography of the injured author, filled with dark secrets that could devastate the family.",
+    "cover": "/books/verity/cover.png"
+  }
+]
